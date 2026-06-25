@@ -34,3 +34,10 @@ dist/
 # Logs
 *.log
 logs/
+uvicorn.err
+uvicorn.out
+
+# Local dev helper scripts (PowerShell-only, not used on Render)
+_run_*.ps1
+_stop_server.ps1
+_check_key.ps1

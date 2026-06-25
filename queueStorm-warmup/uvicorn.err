@@ -1,0 +1,15 @@
+INFO:     Started server process [24568]
+INFO:     Waiting for application startup.
+2026-06-25 22:08:57,873 INFO main | QueueStorm classifier (Gemini backend) is ready.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-06-25 22:10:11,258 INFO google_genai.models | AFC is enabled with max remote calls: 10.
+2026-06-25 22:10:14,485 INFO httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-06-25 22:10:15,015 INFO google_genai.models | AFC is enabled with max remote calls: 10.
+2026-06-25 22:10:18,783 INFO httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-06-25 22:10:19,304 INFO google_genai.models | AFC is enabled with max remote calls: 10.
+2026-06-25 22:10:21,985 INFO httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-06-25 22:10:22,497 INFO google_genai.models | AFC is enabled with max remote calls: 10.
+2026-06-25 22:10:27,849 INFO httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-06-25 22:10:28,350 INFO google_genai.models | AFC is enabled with max remote calls: 10.
+2026-06-25 22:10:31,379 INFO httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
