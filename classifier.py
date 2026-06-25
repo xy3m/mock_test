@@ -45,7 +45,11 @@ except ImportError:  # pragma: no cover - the dep is in requirements.txt
     genai = None  # type: ignore[assignment]
 
 # Gemini 2.5 Flash is fast, cheap, and strong on structured JSON output.
+# We keep 2.0-flash as a fallback because 2.5 occasionally returns empty text
+# under load or when the prompt contains phrasing that looks similar to the
+# few-shot examples.
 MODEL_NAME: str = "gemini-2.5-flash"
+FALLBACK_MODEL_NAME: str = "gemini-2.0-flash"
 MAX_TOKENS: int = 512
 
 # Tokens that must never appear in the agent_summary field.
@@ -211,22 +215,69 @@ async def classify_ticket(ticket: TicketRequest) -> TicketResponse:
             return _fallback_response(ticket)
 
         # Gemini takes the system prompt as a separate `config.system_instruction`
-        # and the user turn as `contents`. Wrap in a small retry loop because
-        # `gemini-2.5-flash` returns occasional 503s under load.
-        async def _call_once() -> str:
+        # and the user turn as `contents`. We try the primary model first and
+        # fall back to 2.0-flash if it returns empty text (which has been seen
+        # when the prompt closely mirrors a few-shot example).
+        async def _call_once(model: str) -> str:
             response = client.models.generate_content(
-                model=MODEL_NAME,
+                model=model,
                 contents=_build_user_message(ticket),
                 config={
                     "system_instruction": SYSTEM_PROMPT,
                     "max_output_tokens": MAX_TOKENS,
                     "response_mime_type": "application/json",
+                    # Don't let benign finance words trip the safety filter.
+                    "safety_settings": [
+                        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+                    ],
                 },
             )
-            return getattr(response, "text", "") or ""
+            text = getattr(response, "text", "") or ""
+            if text:
+                return text
+            # Surface the finish reason / prompt-feedback if we got nothing.
+            try:
+                feedback = getattr(response, "prompt_feedback", None)
+                if feedback is not None:
+                    logger.warning(
+                        "Empty response from %s for ticket %s; prompt_feedback=%s",
+                        model,
+                        ticket.ticket_id,
+                        feedback,
+                    )
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                candidates = getattr(response, "candidates", None) or []
+                if candidates:
+                    fr = getattr(candidates[0], "finish_reason", None)
+                    logger.warning(
+                        "Empty response from %s for ticket %s; candidate finish_reason=%s",
+                        model,
+                        ticket.ticket_id,
+                        fr,
+                    )
+            except Exception:  # noqa: BLE001
+                pass
+            return ""
+
+        async def _call_with_fallback() -> str:
+            text = await _call_with_retry(lambda: _call_once(MODEL_NAME))
+            if text:
+                return text
+            logger.warning(
+                "Primary model %s returned empty text for ticket %s; trying fallback %s",
+                MODEL_NAME,
+                ticket.ticket_id,
+                FALLBACK_MODEL_NAME,
+            )
+            return await _call_with_retry(lambda: _call_once(FALLBACK_MODEL_NAME))
 
         try:
-            raw_text = await _call_with_retry(_call_once)
+            raw_text = await _call_with_fallback()
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Gemini call failed for ticket %s after retries: %s",
