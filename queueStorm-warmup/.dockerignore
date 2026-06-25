@@ -1,0 +1,35 @@
+# Local secrets / config
+.env
+.env.*
+!.env.example
+
+# Python build artefacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+venv/
+.venv/
+env/
+ENV/
+
+# IDE / OS junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tests / docs that aren't needed in the image
+tests/
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
